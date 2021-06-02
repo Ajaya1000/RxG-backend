@@ -1,17 +1,33 @@
 const mongoose = require('mongoose');
 
+const LogSchema = new mongoose.Schema({
+  index: Number,
+  value: Number,
+  result: Number,
+});
+
 const UserSchema = new mongoose.Schema({
   name: String,
-  move: Number,
+  remainingMove: Number,
   isAdmin: Boolean,
-  status: Boolean,
+  status: String,
   socketId: String,
+  answer: [String],
+  log: [LogSchema],
 });
+
+const LeaderboardSchema = new mongoose.Schema({
+  user: String,
+  bestReveal: Number,
+  bestMove: Number,
+});
+
 const RoomSchema = new mongoose.Schema({
   code: String,
   answer: [Number],
   users: [UserSchema],
   level: Number,
+  leaderboard: [LeaderboardSchema],
 });
 
 const RoomModel = mongoose.model('Room', RoomSchema);
