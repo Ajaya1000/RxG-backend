@@ -41,76 +41,74 @@ mongoose.connect(
       socket.on('joinRoom', (data) => {
         console.log('JoinRoom Called', data);
 
-        if (data.type === 'create') {
-          console.log('inside create');
-
-          const answer = [1, 2, 3, 4, 5];
-          let newRoom = new RoomModel({
-            code: data.room,
-            answer,
-            users: [
-              {
-                name: data.username,
-                move: 10,
-                isAdmin: true,
-                status: false,
-                socketId: socket.id,
-              },
-            ],
-            level: data.level,
-          });
-
-          newRoom
-            .save()
-            .then((room) => {
-              socket.join(room.code);
-              console.log('save complete', room);
-              io.to(room.code).emit('joined', room);
-              socket.emit('currentUser', {
-                name: data.username,
-                move: 10,
-                isAdmin: true,
-                status: false,
-                socketId: socket.id,
-              });
-            })
-            .catch((err) => {
-              console.log('error occured while creating new room');
+        RoomModel.find({ code: data.room }, (err, docs) => {
+          let existingRoom = docs[0];
+          if (existingRoom === undefined && data.type === 'create') {
+            const answer = [1, 2, 3, 4, 5];
+            let newRoom = new RoomModel({
+              code: data.room,
+              answer,
+              users: [
+                {
+                  name: data.username,
+                  move: 10,
+                  isAdmin: true,
+                  status: false,
+                  socketId: socket.id,
+                },
+              ],
+              level: data.level,
             });
-        } else {
-          RoomModel.find({ code: data.room }, (err, docs) => {
-            let existingRoom = docs[0];
-            if (existingRoom === undefined) {
-              socket.emit('error', "Room doesn't exist");
-            } else {
-              existingRoom.users.push({
-                name: data.username,
-                move: 10,
-                isAdmin: false,
-                status: false,
-                socketId: socket.id,
-              });
 
-              existingRoom
-                .save()
-                .then((room) => {
-                  socket.join(room.code);
-                  console.log('save complete', room);
-                  io.to(room.code).emit('joined', room);
-                  socket.emit('currentUser', {
-                    name: data.username,
-                    move: 10,
-                    isAdmin: false,
-                    status: false,
-                    socketId: socket.id,
-                  });
-                })
-                .catch((err) => {
-                  console.log('error occured while creating new room');
+            newRoom
+              .save()
+              .then((room) => {
+                socket.join(room.code);
+                console.log('save complete', room);
+                io.to(room.code).emit('joined', room);
+                socket.emit('currentUser', {
+                  name: data.username,
+                  move: 10,
+                  isAdmin: true,
+                  status: false,
+                  socketId: socket.id,
                 });
-            }
-          });
-        }
+              })
+              .catch((err) => {
+                console.log('error occured while creating new room');
+              });
+          } else if (existingRoom !== undefined && data.type === 'join') {
+            existingRoom.users.push({
+              name: data.username,
+              move: 10,
+              isAdmin: false,
+              status: false,
+              socketId: socket.id,
+            });
+
+            existingRoom
+              .save()
+              .then((room) => {
+                socket.join(room.code);
+                console.log('save complete', room);
+                io.to(room.code).emit('joined', room);
+                socket.emit('currentUser', {
+                  name: data.username,
+                  move: 10,
+                  isAdmin: false,
+                  status: false,
+                  socketId: socket.id,
+                });
+              })
+              .catch((err) => {
+                console.log('error occured while creating new room');
+              });
+          } else if (existingRoom === undefined) {
+            socket.emit('error', "Room doesn't exist");
+          } else {
+          }
+          socket.emit('error', 'Room already exist');
+        });
       });
     });
   }
