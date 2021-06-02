@@ -106,8 +106,8 @@ mongoose.connect(
           } else if (existingRoom === undefined) {
             socket.emit('error', "Room doesn't exist");
           } else {
+            socket.emit('error', 'Room already exist');
           }
-          socket.emit('error', 'Room already exist');
         });
       });
     });
