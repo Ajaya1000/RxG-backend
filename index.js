@@ -28,6 +28,17 @@ const io = socketio(server, {
 const PORT = 4000 || process.env.PORT;
 const url = 'mongodb://localhost:27017/rxg';
 
+const giveLobbyData = (room) => ({
+  level: room.level,
+  users: room.users,
+  leaderboard: room.leaderboard,
+  code: room.code,
+});
+
+const giveRandomAnswer = (level) => {};
+const giveMove = (level) => {};
+const giveInitAnswer = (level) => {};
+
 mongoose.connect(
   url,
   { useNewUrlParser: true, useUnifiedTopology: true },
@@ -44,20 +55,23 @@ mongoose.connect(
         RoomModel.find({ code: data.room }, (err, docs) => {
           let existingRoom = docs[0];
           if (existingRoom === undefined && data.type === 'create') {
-            const answer = [1, 2, 3, 4, 5];
+            const answer = giveRandomAnswer(data.level);
             let newRoom = new RoomModel({
               code: data.room,
               answer,
               users: [
                 {
                   name: data.username,
-                  move: 10,
+                  remainingMove: giveMove(data.level),
                   isAdmin: true,
-                  status: false,
+                  status: 'not ready',
                   socketId: socket.id,
+                  answer: giveInitAnswer(data.level),
+                  log: [],
                 },
               ],
               level: data.level,
+              leaderboard: [],
             });
 
             newRoom
@@ -65,25 +79,29 @@ mongoose.connect(
               .then((room) => {
                 socket.join(room.code);
                 console.log('save complete', room);
-                io.to(room.code).emit('joined', room);
+                io.to(room.code).emit('update', giveLobbyData(room));
                 socket.emit('currentUser', {
                   name: data.username,
-                  move: 10,
+                  remainingMove: giveMove(data.level),
                   isAdmin: true,
-                  status: false,
+                  status: 'not ready',
                   socketId: socket.id,
+                  answer: giveInitAnswer(data.level),
+                  log: [],
                 });
               })
               .catch((err) => {
-                console.log('error occured while creating new room');
+                console.error(err);
               });
           } else if (existingRoom !== undefined && data.type === 'join') {
             existingRoom.users.push({
               name: data.username,
-              move: 10,
+              remainingMove: giveMove(existingRoom.level),
               isAdmin: false,
-              status: false,
+              status: 'not ready',
               socketId: socket.id,
+              answer: giveInitAnswer(existingRoom.level),
+              log: [],
             });
 
             existingRoom
@@ -91,22 +109,30 @@ mongoose.connect(
               .then((room) => {
                 socket.join(room.code);
                 console.log('save complete', room);
-                io.to(room.code).emit('joined', room);
+                io.to(room.code).emit('update', giveLobbyData(room));
                 socket.emit('currentUser', {
                   name: data.username,
-                  move: 10,
+                  remainingMove: giveMove(existingRoom.level),
                   isAdmin: false,
-                  status: false,
+                  status: 'not ready',
                   socketId: socket.id,
+                  answer: giveInitAnswer(existingRoom.level),
+                  log: [],
                 });
               })
               .catch((err) => {
-                console.log('error occured while creating new room');
+                console.log(err);
               });
           } else if (existingRoom === undefined) {
-            socket.emit('error', "Room doesn't exist");
+            socket.emit('error', {
+              type: 'sessionError',
+              val: "Room doesn't exist",
+            });
           } else {
-            socket.emit('error', 'Room already exist');
+            socket.emit('error', {
+              type: 'sessionError',
+              val: 'Room already exist',
+            });
           }
         });
       });
