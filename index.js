@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const socketio = require('socket.io');
 const cors = require('cors');
 const _ = require('lodash');
+require('dotenv').config();
 
 const { RoomModel } = require('./schema');
 
@@ -27,8 +28,8 @@ const io = socketio(server, {
   },
 });
 
-const PORT = 4000 || process.env.PORT;
-const url = 'mongodb://localhost:27017/rxg';
+const PORT = process.env.PORT || 4000;
+const url = process.env.DATABASE;
 
 const giveLobbyData = (room) => ({
   level: room.level,
@@ -69,6 +70,7 @@ mongoose.connect(
           socket.emit('error', {
             type: 'sessionError',
             val: 'Cannot create/join with null data',
+            from: 'joinRoom',
           });
         } else {
           RoomModel.find({ code: data.room }, (err, docs) => {
@@ -146,11 +148,13 @@ mongoose.connect(
               socket.emit('error', {
                 type: 'sessionError',
                 val: "Room doesn't exist",
+                from: 'joinRoom',
               });
             } else {
               socket.emit('error', {
                 type: 'sessionError',
                 val: 'Room already exist',
+                from: 'joinRoom',
               });
             }
           });
@@ -165,6 +169,7 @@ mongoose.connect(
             socket.emit('error', {
               type: 'unknown',
               value: 'Error while starting game.Room not found',
+              from: 'readytoStartGame',
             });
           } else if (data.user.isAdmin) {
             console.log('in ready to start game', existingRoom);
@@ -191,6 +196,7 @@ mongoose.connect(
               socket.emit('error', {
                 type: 'notReady',
                 value: "Someone in your room isn't ready",
+                from: 'readytoStartGame',
               });
             }
           } else {
@@ -201,6 +207,7 @@ mongoose.connect(
               socket.emit('error', {
                 type: 'userNotExist',
                 value: 'User does not exist',
+                from: 'readytoStartGame',
               });
             } else {
               existingRoom.users[userIndex].status = 'ready';
@@ -229,6 +236,7 @@ mongoose.connect(
             socket.emit('error', {
               type: 'unknown',
               value: 'Error.Room for current user can not be found',
+              from: 'currentUser',
             });
           } else {
             const userIndex = existingRoom.users.findIndex(
@@ -237,11 +245,13 @@ mongoose.connect(
             if (userIndex < 0) {
               socket.emit('error', {
                 type: 'userNotExist',
-                value: 'User does not exist',
+                value: 'User does not exist,inside current user',
+                from: 'currentUser',
               });
             }
             socket.emit('currentUser', existingRoom.users[userIndex]);
-            console.log('Current user emited');
+            console.log('Current user emited', existingRoom);
+            console.log('scoket id', socket.id);
           }
         });
       });
