@@ -167,13 +167,15 @@ mongoose.connect(
               value: 'Error while starting game.Room not found',
             });
           } else if (data.user.isAdmin) {
+            console.log('in ready to start game', existingRoom);
             let canStartGame = true;
             for (let i = 0; i < existingRoom.users.length; i++) {
               canStartGame =
                 canStartGame &&
                 (existingRoom.users[i].status === 'ready' ||
-                  socket.id === data.user.socketId);
+                  existingRoom.users[i].socketId === data.user.socketId);
             }
+
             if (canStartGame) {
               for (let i = 0; i < existingRoom.users.length; i++) {
                 existingRoom.users[i].status = 'in game';
@@ -222,10 +224,11 @@ mongoose.connect(
           console.log('cuurent user catch', docs);
 
           if (existingRoom === undefined) {
-            console.log('existing room inside');
+            console.log('existing room inside currentUser', roomCode);
+            console.log('docs', docs);
             socket.emit('error', {
               type: 'unknown',
-              value: 'Error while starting game.Room not found',
+              value: 'Error.Room for current user can not be found',
             });
           } else {
             const userIndex = existingRoom.users.findIndex(
@@ -249,7 +252,7 @@ mongoose.connect(
           if (existingRoom === undefined) {
             socket.emit('error', {
               type: 'unknown',
-              value: 'Error while starting game.Room not found',
+              value: 'Error while update.Room not found',
             });
           } else {
             socket.emit('update', giveLobbyData(existingRoom));
