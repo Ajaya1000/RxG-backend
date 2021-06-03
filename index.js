@@ -54,6 +54,18 @@ const giveUserInitAnswer = (level) => {
   else return ['?', '?', '?', '?', '?'];
 };
 
+const giveNumberOfReveal = (arr) => {
+  let count = 0;
+
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] !== '?') count++;
+  }
+
+  return count;
+};
+
+const giveBestMove = (remainingMove, level) => giveMove(level) - remainingMove;
+
 mongoose.connect(
   url,
   { useNewUrlParser: true, useUnifiedTopology: true },
@@ -298,6 +310,17 @@ mongoose.connect(
               });
             } else {
               existingRoom.users[userIndex].status = 'not ready';
+
+              existingRoom.leaderboard.push({
+                user: existingRoom.users[userIndex].name,
+                bestReveal: giveNumberOfReveal(
+                  existingRoom.users[userIndex].answer
+                ),
+                bestMove: giveBestMove(
+                  existingRoom.users[userIndex].remainingMove,
+                  existingRoom.level
+                ),
+              });
 
               existingRoom
                 .save()
