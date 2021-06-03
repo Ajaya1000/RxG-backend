@@ -38,7 +38,7 @@ const giveLobbyData = (room) => ({
   code: room.code,
 });
 
-const giveRandomAnswer = (level) => {
+const givRandomRoomAnswer = (level) => {
   if (level === 0) return _.shuffle([1, 2, 3]);
   else return _.shuffle([1, 2, 3, 4, 5]);
 };
@@ -49,7 +49,7 @@ const giveMove = (level) => {
   else return 10;
 };
 
-const giveInitAnswer = (level) => {
+const giveUserInitAnswer = (level) => {
   if (level == 0) return ['?', '?', '?'];
   else return ['?', '?', '?', '?', '?'];
 };
@@ -76,7 +76,7 @@ mongoose.connect(
           RoomModel.find({ code: data.room }, (err, docs) => {
             let existingRoom = docs ? docs[0] : undefined;
             if (existingRoom === undefined && data.type === 'create') {
-              const answer = giveRandomAnswer(data.level);
+              const answer = givRandomRoomAnswer(data.level);
               let newRoom = new RoomModel({
                 code: data.room,
                 answer,
@@ -87,7 +87,7 @@ mongoose.connect(
                     isAdmin: true,
                     status: 'not ready',
                     socketId: socket.id,
-                    answer: giveInitAnswer(data.level),
+                    answer: giveUserInitAnswer(data.level),
                     log: [],
                   },
                 ],
@@ -107,7 +107,7 @@ mongoose.connect(
                     isAdmin: true,
                     status: 'not ready',
                     socketId: socket.id,
-                    answer: giveInitAnswer(data.level),
+                    answer: giveUserInitAnswer(data.level),
                     log: [],
                   });
                 })
@@ -121,7 +121,7 @@ mongoose.connect(
                 isAdmin: false,
                 status: 'not ready',
                 socketId: socket.id,
-                answer: giveInitAnswer(existingRoom.level),
+                answer: giveUserInitAnswer(existingRoom.level),
                 log: [],
               });
 
@@ -137,7 +137,7 @@ mongoose.connect(
                     isAdmin: false,
                     status: 'not ready',
                     socketId: socket.id,
-                    answer: giveInitAnswer(existingRoom.level),
+                    answer: giveUserInitAnswer(existingRoom.level),
                     log: [],
                   });
                 })
@@ -184,6 +184,15 @@ mongoose.connect(
             if (canStartGame) {
               for (let i = 0; i < existingRoom.users.length; i++) {
                 existingRoom.users[i].status = 'in game';
+                existingRoom.users[i].answer = giveUserInitAnswer(
+                  existingRoom.level
+                );
+                existingRoom.users[i].remainingMove = giveMove(
+                  existingRoom.level
+                );
+                existingRoom.users[i].log = [];
+
+                existingRoom.answer = givRandomRoomAnswer(existingRoom.level);
               }
               existingRoom
                 .save()
@@ -329,7 +338,7 @@ mongoose.connect(
                 });
               } else {
                 existingRoom.users[userIndex].remainingMove -= 1;
-                console.log('Before', existingRoom.users[userIndex].answer);
+
                 let result;
                 if (existingRoom.answer[data.index] === data.value) {
                   let newAnsArray = [];
@@ -350,7 +359,7 @@ mongoose.connect(
                   if (trueIndex > data.index) result = 1;
                   else result = -1;
                 }
-                console.log('after', existingRoom.users[userIndex].answer);
+
                 existingRoom.users[userIndex].log.push({
                   index: data.index,
                   value: data.value,
